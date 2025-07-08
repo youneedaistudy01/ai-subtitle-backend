@@ -1,7 +1,10 @@
-from fastapi import FastAPI, UploadFile, File
 import os
-import whisper
 from datetime import datetime, timedelta
+
+import whisper
+from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+
 
 ## 디렉토리 생성 ######################
 ## 동영상이 저장되는 폴더: uploads
@@ -17,6 +20,15 @@ model = whisper.load_model('small')
 
 ## FastAPI app 생성
 app = FastAPI()
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get('/')
 def index():
@@ -63,7 +75,17 @@ async def create_subtitled_video(file: UploadFile = File(...)):
             file.write(f'{start} --> {end}\n')
             file.write(f'{text}\n\n')
 
-    return '요청 처리됨'
+    return {
+    "srt": [
+        {
+            "index": i,
+            "start": format_time(seg['start']),
+            "end": format_time(seg['end']),
+            "text": seg['text'].strip()
+        } for i, seg in enumerate(segments, 1)
+    ]
+}
+
 
 
 def format_time(seconds):
